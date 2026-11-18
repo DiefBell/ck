@@ -17,18 +17,24 @@ printf 'fn main() { println!("release regression needle"); }\n' > "$source_file"
 
 # JSON avoids terminal highlighting and lets us reject dummy zero-score
 # embeddings as well as missing or incorrectly scoped results.
-python3 - "$source_file" "$fixture/regex.jsonl" "$fixture/semantic.jsonl" <<'PY'
+# Windows runners provide `python` rather than `python3`, so callers can override it.
+"${PYTHON:-python3}" - "$source_file" "$fixture/regex.jsonl" "$fixture/semantic.jsonl" <<'PY'
 import json
 import math
 import sys
 from pathlib import Path
 
-expected_file = Path(sys.argv[1]).resolve()
+# ck reports Windows paths in verbatim form (\\?\C:\...), which pathlib
+# doesn't treat as equal to the plain path.
+def normalise(path):
+    return Path(path.removeprefix("\\\\?\\")).resolve()
+
+expected_file = normalise(sys.argv[1])
 for mode, output in zip(("regex", "semantic"), sys.argv[2:]):
     results = [json.loads(line) for line in Path(output).read_text().splitlines()]
     assert results, f"{mode}: no results"
     for result in results:
-        assert Path(result["file"]).resolve() == expected_file, result
+        assert normalise(result["file"]) == expected_file, result
         assert "release regression needle" in result["preview"], result
         if mode == "semantic":
             score = result["score"]

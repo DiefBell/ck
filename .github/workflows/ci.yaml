@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: none
     name: CI
-    needs: [test, msrv, lockfile, rustfmt, clippy, docs, vscode, release-checks, linux-arm-release]
+    needs: [test, msrv, lockfile, rustfmt, clippy, docs, vscode, release-checks, linux-arm-release, windows-release]
     runs-on: ubuntu-latest
     if: "always()"
     steps:
@@ -46,9 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows tests disabled due to esaxx-rs/ort runtime library mismatch (MT vs MD)
-        # See: https://github.com/huggingface/tokenizers/issues/1482
-        os: ["ubuntu-latest", "macos-latest"]
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         rust: ["stable"]
     continue-on-error: ${{ matrix.rust != 'stable' }}
     runs-on: ${{ matrix.os }}
@@ -131,6 +129,26 @@ jobs:
         ldd "$binary"
         readelf --version-info "$binary" | grep -E "Name: (GLIBC|GLIBCXX|CXXABI)"
         bash .github/tests/test_release_binary.sh "$binary"
+  windows-release:
+    name: Windows release smoke test
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@v7
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-pc-windows-msvc
+    - uses: Swatinem/rust-cache@v2
+    - name: Build the release binary
+      env:
+        OPENSSL_NO_VENDOR: 1
+      run: cargo build --locked --release --target x86_64-pc-windows-msvc --package ck-search
+    - name: Exercise the release binary
+      env:
+        PYTHON: python
+      run: bash .github/tests/test_release_binary.sh "$PWD/target/x86_64-pc-windows-msvc/release/ck.exe"
   msrv:
     name: "Check MSRV"
     runs-on: ubuntu-latest
