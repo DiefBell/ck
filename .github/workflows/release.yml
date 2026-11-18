@@ -128,11 +128,9 @@ jobs:
         run: |
           # Different approaches for different platforms
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            # Windows: Build without ANY embedding features due to esaxx-rs/ort runtime library mismatch
-            # Both fastembed and mixedbread depend on tokenizers which has esaxx-rs (MT) conflicting with ort-sys (MD)
-            # See: https://github.com/huggingface/tokenizers/issues/1482
-            # Windows users get regex search only (no semantic search)
-            ${{ env.CARGO_CMD }} build --locked --release --target ${{ matrix.target }} --package ck-search --no-default-features
+            # Windows: Full feature set. tokenizers' esaxx_fast feature is disabled in Cargo.toml,
+            # so esaxx-rs no longer compiles C++ with a static CRT that conflicts with ort-sys (MD).
+            ${{ env.CARGO_CMD }} build --locked --release --target ${{ matrix.target }} --package ck-search
           elif [ "${{ matrix.os }}" = "macos-latest" ]; then
             # macOS approach - use system OpenSSL to avoid cross-compilation issues
             if [ "${{ matrix.target }}" = "x86_64-apple-darwin" ]; then

@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Windows semantic search** (#200): Disable tokenizers' default `esaxx_fast` feature, so esaxx-rs no longer compiles C++ against a static CRT that fails to link with ONNX Runtime's dynamic CRT on MSVC. Windows release binaries are now built with embedding support, and CI runs the test suite on Windows. Training code is the only user of esaxx-rs, and ck never trains a tokenizer, so search behaviour is unchanged.
+
 ## [0.8.1] - 2026-10-11
 
 This is the first published 0.8 release. The 0.8.0 build attempt stopped before
